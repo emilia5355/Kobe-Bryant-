@@ -1,0 +1,729 @@
+---
+title: "Kobe Bryant - legenda NBA"
+format:
+  html:
+    toc: true
+    toc-title: "Spis treści"
+    toc-depth: 2
+    toc-location: right
+    number-sections: true
+    editor: visual
+    author: "Emilia Zaprawa"
+execute: 
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#biblioteki
+library(ggplot2)
+library(dplyr)
+library(gganimate)
+library(plotly)
+library(wordcloud)
+library(tm)
+library(RColorBrewer)
+library(ggimage)
+library(png)
+library(grid)
+library(knitr)
+library(kableExtra)
+library(corrplot)
+library(tidyverse)
+```
+
+```{r}
+knitr::include_graphics("lakers1.png")
+```
+
+## Założenia i cele projektu
+
+**Temat projektu\
+**Analiza czynników wpływających na wyniki sportowe Kobe Bryanta na podstawie danych dotyczących jego kariery koszykarskiej.
+
+**Cel projektu**
+
+Celem projektu jest zbadanie, jakie czynniki miały największy wpływ na wyniki sportowe Kobe Bryanta w trakcie jego kariery w NBA. Projekt skupia się również na analizie wpływu typu meczu, wieku zawodnika (sezonu) oraz miejsca rozgrywania meczu na jego wyniki punktowe.
+
+**Problemy badawcze**
+
+-   Z kim Kobe Bryant najczęściej mierzył się w rozgrywkach?
+
+-   Jak miejsce gry wpływało na wynik meczu?
+
+-   Jak zmieniał się styl gry Kobe Bryanta wraz z wiekiem?
+
+**Hipotezy**
+
+-   Wraz z rozwojem kariery skuteczność, umiejętności i doświadczenie Kobe Bryanta zwiększały się.
+
+-   Mecze rozgrywane w domu częściej kończyły się sukcesem niż porażką.
+
+-   Przeciwnicy, z którymi Los Angeles Lakers najczęściej rozgrywało mecze byli również tymi, których najtrudniej było pokonać.
+
+## Wstęp
+
+Los Angeles Lakers to jeden z najbardziej utytułowanych i rozpoznawalnych klubów w historii NBA, który od lat stanowi symbol nie tylko sukcesu na boisku, ale również wpływu na kulturę sportową i popkulturę. Los Angeles Lakers to także drużyna, której styl gry i osiągnięcia miały wpływ na rozwój całej ligi NBA, jak i na społeczności sportowe na całym świecie.
+
+Jedną z największych gwiazd Los Angeles Lakers był Kobe Bryant, który został członkiem tej drużyny w 1996 roku. W swoim debiutanckim sezonie (1996-1997) miał 18 lat, co czyniło go jednym z najmłodszych graczy w historii NBA. Z biegiem lat stał się jednym z kluczowych zawodników drużyny, a jego kariera w Lakers trwała aż do jej zakończenia w 2016 roku. Bryant spędził całe 20 lat swojej kariery w Los Angeles Lakers, stając się legendą klubu.
+
+## Opis zbioru
+
+Zbiór przedstawia szczegółowe dane dotyczące kariery legendy NBA - Kobe Bryanta. Zawiera on kolumny takie jak:
+
+1.  **season:** The NBA season during which the game took place.
+
+2.  **date:** The date of the game.
+
+3.  **age:** Kobe Bryant's age at the time of the game.
+
+4.  **team_played:** The team Kobe Bryant played for during the game.
+
+5.  **game_type:** The type of game (regular season, playoffs, etc.).
+
+6.  **venue:** The arena or stadium where the game was held.
+
+7.  **opponent:** The opposing team.
+
+8.  **win_lose:** Indicates whether Kobe's team won or lost the game.
+
+9.  **point_difference:** The difference in points between Kobe's team and the opposing team.
+
+10. **game_started:** Whether Kobe started the game or came off the bench.
+
+11. **minutes_played:** The total minutes Kobe played in the game.
+
+12. **fieldgoal:** The number of field goals Kobe made.
+
+13. **fieldgoal_attempts:** The total number of field goal attempts by Kobe.
+
+14. **fieldgoal_percent:** Kobe's shooting percentage for field goals.
+
+15. **3pointers:** The number of three-pointers Kobe made.
+
+16. **3pointers_attempts:** The total number of three-point attempts by Kobe.
+
+17. **3pointers_percent:** Kobe's shooting percentage for three-pointers.
+
+18. **freethrows:** The number of free throws Kobe made.
+
+19. **freethrows_attempt:** The total number of free throw attempts by Kobe.
+
+20. **freethrow_percent:** Kobe's shooting percentage for free throws.
+
+21. **offensive_rebounds:** The number of offensive rebounds by Kobe.
+
+22. **defensive_rebounds:** The number of defensive rebounds by Kobe.
+
+23. **total_rebounds:** The total number of rebounds by Kobe.
+
+24. **assists:** The number of assists by Kobe.
+
+25. **steals:** The number of steals by Kobe.
+
+26. **blocks:** The number of blocks by Kobe.
+
+27. **turnovers:** The number of turnovers by Kobe.
+
+28. **personal_fouls:** The number of personal fouls committed by Kobe.
+
+29. **points:** The total points scored by Kobe in the game.
+
+## Import i czyszczenie zbioru
+
+```{r}
+data <- read.csv("kobebryant.csv")
+```
+
+```{r}
+na_summary<-colSums(is.na(data))
+data$win_lose <- factor(data$win_lose)
+data$team_played <- factor(data$team_played)
+data$opponent <- factor(data$opponent)
+data$venue <- factor(data$venue)
+data$game_type <- factor(data$game_type)
+data$points <- factor(data$points)
+data$assists <- factor(data$assists)
+data <- data %>%
+  mutate(across(c(win_lose, team_played, opponent, venue, game_type, points, assists, game_started, minutes_played, fieldgoal, fieldgoal_attempts, fieldgoal_percent, X3pointers, X3pointers_attempts, X3pointers_percent, freethrows, freethrows_attempt, freethrow_percent, offensive_rebounds, defensive_rebounds, total_rebounds, steals, blocks, turnovers, personal_fouls), as.factor))
+
+data <- data %>%
+  mutate(across(c(fieldgoal, fieldgoal_attempts, fieldgoal_percent, personal_fouls, points, steals, assists, turnovers, blocks, offensive_rebounds, defensive_rebounds,total_rebounds, point_difference, minutes_played), as.numeric))
+
+data <- data[, -c(10,15,16,17)]
+```
+
+Zbiór nie zawierał wartości NA, był gotowy do analizy. Większość zmiennych było zaimplementowanych jako zmienne typu character. W dużej mierze zostały one przekonwertowane na zmienne typu factor oraz numeric w celu poszerzenia możliwości wykorzystania zbioru do analizy zależności między zmiennymi. \
+Po dokonaniu analizy i wykonaniu wizualizacji ze zbioru zostały usunięte niewykorzystane kolumny: game_started, X3pointers, X3pointers_attempts, X3pointers_percent.
+
+## Wizualizacje
+
+### Liczba meczów w zależności od sezonu
+
+```{r}
+seasons_groups <- data %>%
+  count(season, name = "Records")
+
+animowany_wykres <- ggplot(seasons_groups, aes(x = season, y = Records)) +
+  geom_line(color = "blueviolet", size = 1) +  
+  geom_point(color = "gold", size = 2) + 
+  labs(
+    title = "Number of matches in seasons",
+    x = "Season",
+    y = "Number of matches"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(breaks = seasons_groups$season) +  
+  transition_reveal(season)
+
+animate(animowany_wykres)
+
+anim_save("animowany_wykres.gif", animation = last_animation())
+
+```
+
+Liczba rozegranych meczów przez Kobe Bryanta jest zmienna w zależności od sezonu. Największą liczbę meczów (około 100) Kobe Bryant rozegrał w 13 sezonie. Największy spadek w liczbie meczów nastąpił w 18 sezonie. Było to spowodowane przerwą w karierze, wywołaną kontuzją ścięgna Achillesa. Wykluczyło go to z gry na resztę sezonu NBA. Kontuzja ta wpłynęła na jego dalszą karierę, ponieważ już niegdy nie wrócił do formy sprzed wypadku.
+
+### Przeciwnicy a liczba meczów
+
+```{r}
+frecquencies<-as.data.frame(table(data[[7]]))
+colnames(frecquencies)<-c("opponent", "Frecquency")
+
+ggplot(frecquencies, aes(x=opponent, y=Frecquency, fill=opponent))+
+  geom_bar(stat="identity", color="black")+
+  labs(title="")+
+  theme_minimal()+
+  theme(
+        plot.title = element_text(hjust=0.5, size=14, face="bold"),
+        axis.text.x = element_text(angle=66, hjust=1),
+        legend.position = "none")+
+  scale_y_continuous(breaks = seq(0, max(frecquencies$Frecquency), by = 500))
+```
+
+Wykres przedstawia częstotliwość spotkań Los Angeles Lakers z różnymi przeciwnikami w NBA. Największą częstotliwością odznaczają się mecze z Denver Nuggets, Phoenix Suns, Portland Trailbrazers, Sacramento Kings, San Antonio Spurs i Utah Jazz.\
+Najrzadsi przeciwnicy to Brooklyn Nets, New Orleans oraz Washington Bullets.
+
+Różnice w częstotliwości gry z różnymi przeciwnikami mogą wynikać z podziału na konferencje oraz dywizje, gdzie zespoły częściej grają z lokalnymi rywalami.
+
+### Wordcloud - przeciwnicy
+
+```{r}
+opponents <- data$opponent
+
+opponents <- na.omit(opponents)
+
+opponents_corpus <- Corpus(VectorSource(opponents))
+
+opponents_corpus <- tm_map(opponents_corpus, content_transformer(tolower))
+opponents_corpus <- tm_map(opponents_corpus, removePunctuation)
+opponents_corpus <- tm_map(opponents_corpus, removeNumbers)
+opponents_corpus <- tm_map(opponents_corpus, stripWhitespace)
+
+wordcloud(words = opponents, 
+          min.freq = 1,        
+          max.words = 700,     
+          random.order = FALSE, 
+          colors = brewer.pal(8, "RdPu"))  
+```
+
+Wykres wordcloud obrazuje, z jakimi drużynami Los Angeles Lakers grali najczęściej. Potwierdza on wnioski wyciągnięte z poprzedniego wykresu. Najczęstszymi przeciwnikami Kobe Bryanta były drużyny takie jak Portland Trailbrazers, Phoenix Suns czy San Antonio Spurs. Mecze między Lakers a New Orleans Pelicans czy Boston Celtics odbywały się znacznie rzadziej.
+
+### Procentowe wyniki meczów
+
+```{r}
+ggplot(data, aes(x = opponent, fill = win_lose)) +
+  geom_bar(position = "stack") +
+  labs(title = "Lakers vs others",
+       x = "opponent",
+       y = "Number of matches") +
+  scale_fill_manual(values = c("w" = "blueviolet", "l" = "gold")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+Z wykresu wynika, że Los Angeles Lakers częściej wygrywali ze swoimii przeciwnikami niż odnosili porażki. Największy problem sprawiali Lakersom San Antonio Spurs. Można też zauważyć, że stosunek wygranych meczów jest proporcjonalny do przegranych w przypadku drużyn, z którymi Bryant rozegrał najwięcej meczów.
+
+### Analiza wyników meczów
+
+```{r}
+ggplot(data, aes(x = point_difference, fill = win_lose)) +
+  geom_bar(stat = "count", position = "dodge") +
+  labs(
+    title = "Match result vs points difference",
+    x = "Points difference",
+    y = "Number of matches",
+    fill = "Result"
+  ) +
+  scale_fill_manual(values = c("w" = "blueviolet", "l" = "gold")) +
+  theme_minimal()
+```
+
+Można zaobserwować, że najczęściej Los Angeles Lakers wygrywali różnicą około 10 punktów. Z kolei przegrywali około 7 punktami.
+
+### Analiza meczów domowych i wyjazdowych
+
+```{r}
+ggplot(data, aes(x = venue, fill = win_lose)) +
+  geom_bar(position = "dodge") +  
+  labs(title = "Results depending on venue",
+       x = "Venue", y = "Number of games") +
+  scale_fill_manual(values = c("w" = "blueviolet", "l" = "gold")) +  
+  theme_minimal()  
+```
+
+Wykres przedstawia zależność między miejscem gry (u siebie czy wyjazdowo), a wynikami meczów.\
+W meczach, które Los Angeles Lakers grali u siebie można zauważyć dość zbliżoną liczbę wygranych jak i przegranych.\
+Większa rozbieżność dotyczy meczów rozgrywanych na wyjeździe. W tym wypadku przeważają sukcesy Lakers.
+
+### Analiza meczów wygranych przez Lakers
+
+```{r}
+home_wins <- data[data$win_lose == "w" & data$venue == "home", ]
+
+win_counts <- table(home_wins$opponent)
+
+win_counts_df <- as.data.frame(win_counts)
+
+colnames(win_counts_df) <- c("opponent", "wins")
+
+win_counts_df <- win_counts_df[order(-win_counts_df$wins), ]
+
+top_3_teams <- head(win_counts_df, 3)
+
+top_3_teams$image <- c("minesotta_timberwolves.png", "sacramento_kings.png","denver_nuggets1.png")
+
+ggplot(top_3_teams, aes(x = opponent, y = wins, fill = opponent)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("gold", "steelblue","blueviolet")) +  
+  labs(title = "Teams mostly losing against Lakers at their home", x = "", y = "Number of winning (Lakers)") + 
+  theme_minimal() +
+  geom_image(aes(image = image), size = 0.2, by = "height", vjust = -0.5)+  
+  expand_limits(y = 25)
+
+```
+
+```{r}
+away_wins <- data[data$win_lose == "w" & data$venue == "away", ]
+
+win_counts1 <- table(away_wins$opponent)
+
+win_counts_df1 <- as.data.frame(win_counts1)
+
+colnames(win_counts_df1) <- c("opponent", "wins")
+
+win_counts_df1 <- win_counts_df1[order(-win_counts_df1$wins), ]
+
+top_3_teams2 <- head(win_counts_df1, 3)
+
+top_3_teams2$image <- c("portland.png", "utah_jazz.png", "minesotta_timberwolves.png")
+
+ggplot(top_3_teams2, aes(x = opponent, y = wins, fill = opponent)) +
+  geom_bar(stat = "identity", color="black") +
+  scale_fill_manual(values = c("steelblue", "darkred", "white")) +  
+  labs(title = "Teams mostly losing against Lakers away", x = "", y = "Number of winning (Lakers)") + 
+  theme_minimal() +
+  geom_image(aes(image = image), size = 0.2, by = "height", vjust = -0.5)+  
+  expand_limits(y = 35)
+```
+
+### Analiza meczów przegranych przez Lakers
+
+```{r}
+home_loses <- data[data$win_lose == "l" & data$venue == "home", ]
+
+loses_counts <- table(home_loses$opponent)
+
+loses_counts_df <- as.data.frame(loses_counts)
+
+colnames(loses_counts_df) <- c("opponent", "loses")
+
+loses_counts_df <- loses_counts_df[order(-loses_counts_df$loses), ]
+
+top_3_teams1 <- head(loses_counts_df, 3)
+
+top_3_teams1$image <- c("portland.png", "spurs.png", "utah_jazz.png")
+
+ggplot(top_3_teams1, aes(x = opponent, y = loses, fill = opponent)) +
+  geom_bar(stat = "identity", color="black") +
+  scale_fill_manual(values = c("darkred", "gainsboro", "white")) +  
+  labs(title = "Teams mostly winning with Lakers at their home", x = "", y = "Number of losses to Lakers") + 
+  theme_minimal() +
+  geom_image(aes(image = image), size = 0.2, by = "height", vjust = -0.5) +  # 
+  expand_limits(y = 30)  
+
+```
+
+```{r}
+away_loses <- data[data$win_lose == "l" & data$venue == "away", ]
+
+loses_counts1 <- table(away_loses$opponent)
+
+loses_counts_df1 <- as.data.frame(loses_counts1)
+
+colnames(loses_counts_df1) <- c("opponent", "loses")
+
+loses_counts_df1 <- loses_counts_df1[order(-loses_counts_df1$loses), ]
+
+top_3_teams3 <- head(loses_counts_df1, 3)
+
+top_3_teams3$image <- c("spurs.png", "phoenix.png", "rockets.png")
+
+ggplot(top_3_teams3, aes(x = opponent, y = loses, fill = opponent)) +
+  geom_bar(stat = "identity", color="black") +
+  scale_fill_manual(values = c("gainsboro","darkorange", "gainsboro")) +  
+  labs(title = "Teams mostly winning with Lakers away", x = "", y = "Number of losses to Lakers") + 
+  theme_minimal() +
+  geom_image(aes(image = image), size = 0.2, by = "height", vjust = -0.5) +  
+  expand_limits(y = 30)  
+```
+
+Drużyny, z którymi Los Angeles Lakers wygrywali na wyjeździe są również drużynami, które sprawiały im największe problemy w meczach rozgrywanych u siebie.
+
+### Top 10 meczów
+
+```{r}
+top_10_games <- data %>%
+  arrange(desc(points)) %>%  
+  slice_head(n = 10) %>%    
+  select(date, points)
+
+top_10_games %>%
+  knitr::kable(format = "html", caption = "Top 10 best games of Kobe Bryant", align = "c") %>% 
+  column_spec(1, width = "10em", color = "black", background = "lightgrey", bold = TRUE) %>%  
+  column_spec(2, width = "8em", color = "black", background = "grey") %>%  
+  row_spec(0, bold = TRUE, color = "blueviolet", background = "gold") %>% 
+  row_spec(1:nrow(top_10_games), background = ifelse(1:nrow(top_10_games) %% 2 == 0, "gold", "white")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
+
+```
+
+Mecze, w któych Kobe Bryant uzyskał najwięcej punktów zostały rozegrane przede wszystkim w latach 2002-2009. Są to szczytowe lata jego kariery, gdy był w najwyższej formie. Na 10 najlepszych meczów jedynie 1 jest spoza tego okresu czasu - z 2016 roku. Był to ostatni rok koszykarskiej kariery Bryanta w NBA.
+
+### Play-offy vs mecze sezonowe
+
+```{r}
+ggplot(data, aes(x = game_type, y = minutes_played, fill = game_type)) +
+  geom_boxplot() +
+  labs(
+    title = "Minutes in different types of games",
+    x = "Game type",
+    y = "Minutes"
+  ) +
+  scale_fill_manual(values = c("season" = "blueviolet", "playoff" = "gold")) +
+  theme_minimal()
+```
+
+Mediana minut gry w play-offach jest wyższa niż w meczach sezonowych. Oznacza to, że Kobe Bryant spedział więcej czasu na boisku w fazie play-off. \
+Rozrzut danych dla meczów play-off jest większy, co oznacza większą zmienność minut gry niż w przypadku meczów sezonowych. \
+Zarówno w meczach play-off jak i sezonowych występują wartości od 0 do podobnych wartości maksymalnych, co oznacza, że Bryant mógł nie grać wcale lub grać bardzo długo.
+
+### Wiek a zdobyte punkty
+
+```{r}
+ggplot(data, aes(x = age, y = points)) +
+  geom_point(color = "gold", alpha = 0.6) + 
+  geom_smooth(method = "lm", color = "blueviolet", se = FALSE) +  
+  labs(title = "Correlation between age and points",
+       x = "Age",
+       y = "Points") +
+  theme_minimal()
+```
+
+Korelacja jest lekko dodatnia - wraz z wiekiem, Kobe Bryant utrzymywał wysoką skuteczność punktową. Największa liczba zdobytych punktów przypada na okres między 22 a 30 rokiem życia. Po 32 roku życia widać większą zmienność wyników, z tendencją spadkową.
+
+### Analiza skuteczności Kobe Bryanta
+
+```{r}
+false_count <- sum((data$fieldgoal > data$fieldgoal_attempts))
+false_rows <- which(data$fieldgoal > data$fieldgoal_attempts)
+data_goals <- data[-c(2, 1387), ]
+data_goals$fieldgoals_percent <- (data_goals$fieldgoal / data_goals$fieldgoal_attempts) * 100
+
+ggplot_plot <- ggplot(data_goals, aes(x = fieldgoal_attempts, y = fieldgoal, color = fieldgoals_percent)) + 
+  geom_point(alpha = 0.8) + 
+  scale_color_gradient(low = "gold", high = "blueviolet") + 
+  labs(
+    title = "Efficiency of Kobe Bryant",
+    x = "Fieldgoal attempts",
+    y = "Fieldgoals",
+    color = "Fieldgoal percent"
+  ) + 
+  theme_minimal()
+
+ggplot_plot
+ggplotly(ggplot_plot)
+```
+
+Fioletowe punkty znajdują się blisko prostej y=x, co oznacza wysoką skuteczność – liczba celnych rzutów jest prawie równa liczbie prób.\
+Najniższa skuteczność wyniosła 15%, z kolei najwyższa 100%.
+
+### Faule a wynik meczu
+
+```{r}
+data$personal_faul_group <- cut(data$personal_fouls, breaks = c(0, 2, 4, 6, 8), 
+                       labels = c("0-2", "2-4", "4-6", "6"))
+
+ggplot(data, aes(x = personal_faul_group, fill = win_lose)) +
+  geom_bar(position = "fill") +
+  labs(
+    title = "Result proportion depending on the number of fouls",
+    x = "Number of fouls",
+    y = "Result proportion",
+    fill = "Game result"
+  ) +
+  scale_fill_manual(values = c("w" = "gold", "l" = "blueviolet")) +
+  theme_minimal()
+
+```
+
+Z wykresu wynika, że im cięższy był mecz i trudniej było pokonać przeciwnika, tym zwiększała się agresywność gry, a tym samym liczba fauli.
+
+### Styl gry na przestrzeni sezonów
+
+#### Faule i punkty
+
+```{r}
+aggregated_data <- data %>%
+  group_by(season) %>%
+  summarise(
+    total_fouls = sum(personal_fouls),
+    total_points = sum(points)
+  ) %>%
+  arrange(season)  
+
+ggplot(aggregated_data, aes(x = season)) +
+  geom_line(aes(y = total_fouls, color = "Fouls"), size = 0.5) +  
+  geom_point(aes(y = total_fouls, color = "Fouls"), size = 2) +  
+  
+  geom_line(aes(y = total_points, color = "Points"), size = 0.5) +  
+  geom_point(aes(y = total_points, color = "Points"), size = 2) +  
+  
+  labs(
+    title = "Season vs Fouls and Points",
+    x = "Season",
+    y = "Fouls / Points",
+    color = "Legend"
+  ) +
+  
+  scale_x_continuous(breaks = aggregated_data$season) +  
+  
+  scale_y_continuous(
+    limits = c(0, 3000),  
+    breaks = seq(0, 3000, by = 200)
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 12)
+  ) +
+  
+  scale_color_manual(
+    values = c("Fouls" = "blueviolet", "Points" = "gold")
+  )
+
+```
+
+Wykres przedstawia zmiany w agresywności i skuteczności Kobe Bryanta w zależności od sezonu. Można zauważyć, że styl gry zmieniał się na przestrzeni lat. **\
+**Liczba punktów znacząco wzrasta w pierwszych kilku sezonach, osiągając szczyt około 10-12 sezonu, a następnie gwałtownie spadając w 18 sezonie.\
+Liczba fauli jest mniej zróżnicowana na przestrzeni lat. Jest to związane z karami, które grożą zawodnikom NBA - po popełnieniu 6 fauli gracz musi zejść z boiska.\
+Widać też, że liczba fauli nie wpływa na liczbę zdobytych punktów - zmiany w liczbie fauli nie wpływają na liczbę zdobytych punktów.\
+Spadek w liczbie punktów i fauli w 18 sezonie jest związany z kontuzją odniesioną przez Kobe Bryanta.
+
+#### Korelacja między liczbą fauli, a zdobytymi punkatmi
+
+```{r}
+ggplot(data, aes(x = personal_fouls, y = points)) +
+  geom_point(color = "gold", alpha = 0.7) +  
+  geom_smooth(method = "lm", se = FALSE, color = "blueviolet") +  
+  labs(
+    title = "Correlation between number of fouls and points",
+    x = "Number of fouls",
+    y = "Number of points"
+  ) +
+  theme_minimal()
+```
+
+Brak wyraźnej korelacji - linia trendu jest praktycznie pozioma, co sugeruje, że liczba fauli nie wpływa znacząco na liczbę zdobytych punktów.\
+Rozrzut danych - fioletowe punkty są równomiernie rozproszone dla każdej wartości liczby fauli. Oznacza to, że zawodnik mógł zdobywać zarówno mało, jak i dużo punktów niezależnie od liczby popełnionych fauli.\
+Z wykresu wynika, że Bryant był w stanie utrzymać efektywność punktową niezależnie od tego, ile razy faulował, co świadczy o jego doświadczeniu i umiejętnościach.
+
+#### Asysty, bloki, przechwyty i straty
+
+```{r}
+aggregated_data <- data %>%
+  group_by(season) %>%
+  summarise(
+    total_steals = sum(steals),
+    total_assists = sum(assists),
+    total_blocks = sum(blocks),
+    total_turnovers = sum(turnovers)
+  ) %>%
+  arrange(season)
+
+ggplot(aggregated_data, aes(x = season)) +
+  
+  geom_line(aes(y = total_assists, color = "Assists"), size = 0.5) +  
+  geom_point(aes(y = total_assists, color = "Assists"), size = 2) +  
+  
+  geom_line(aes(y = total_blocks, color = "Blocks"), size = 0.5) +  
+  geom_point(aes(y = total_blocks, color = "Blocks"), size = 2) +  
+  
+  geom_line(aes(y = total_turnovers, color = "Turnovers"), size = 0.5) +  
+  geom_point(aes(y = total_turnovers, color = "Turnovers"), size = 2) +  
+  
+  geom_line(aes(y = total_steals, color = "Steals"), size = 0.5) +  
+  geom_point(aes(y = total_steals, color = "Steals"), size = 2) +  
+  
+  labs(
+    title = "Season vs Assists, Blocks, Turnovers and Steals",
+    x = "Season",
+    y = "Total Stats",
+    color = "Legend"
+  ) +
+  
+  scale_x_continuous(breaks = aggregated_data$season) +  
+  
+  scale_y_continuous(
+    limits = c(0, 700),  
+    breaks = seq(0, 700, by = 100)  
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 12)
+  ) +
+  
+  scale_color_manual(
+    values = c(
+      "Assists" = "gold",
+      "Blocks" = "darkblue",
+      "Turnovers" = "orange",
+      "Steals" = "blueviolet"
+    )
+  )
+
+```
+
+Liczba asyst widocznie wzrosła w pierwszych sezonach, następnie ustabilizowałą się w trakcie trwania kariery.\
+Bloki i przechwyty są na stałym, umiarkowanym poziomie przez większość sezonów, co odzwierciedla dobrą grę w defensywie.\
+Wysoka liczba strat w szczytowych latach kariery może sugerować intensywną grę ofensywną i wysoką częstotliwość posiadania piłki.
+
+#### Zbiórki
+
+```{r}
+aggregated_data <- data %>%
+  group_by(season) %>%
+  summarise(
+    total_offensive_rebounds = sum(offensive_rebounds, na.rm = TRUE),
+    total_defensive_rebounds = sum(defensive_rebounds, na.rm = TRUE),
+    total_rebounds = sum(total_rebounds, na.rm = TRUE)
+  ) %>%
+  arrange(season)
+
+ggplot(aggregated_data, aes(x = season)) +
+  
+  geom_line(aes(y = total_offensive_rebounds, color = "Offensive Rebounds"), size = 0.5) +  
+  geom_point(aes(y = total_offensive_rebounds, color = "Offensive Rebounds"), size = 2) +  
+  
+  geom_line(aes(y = total_defensive_rebounds, color = "Defensive Rebounds"), size = 0.5) +  
+  geom_point(aes(y = total_defensive_rebounds, color = "Defensive Rebounds"), size = 2) +  
+  
+  geom_line(aes(y = total_rebounds, color = "Total Rebounds"), size = 0.5) +  
+  geom_point(aes(y = total_rebounds, color = "Total Rebounds"), size = 2) +  
+  
+  labs(
+    title = "Season vs Offensive, Defensive, and Total Rebounds",
+    x = "Season",
+    y = "Total Rebounds",
+    color = "Legend"
+  ) +
+  
+  scale_x_continuous(breaks = aggregated_data$season) +  
+  
+  scale_y_continuous(
+    limits = c(0, 800),  
+    breaks = seq(0, 800, by = 100)  
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 12)
+  ) +
+  
+  scale_color_manual(
+    values = c(
+      "Offensive Rebounds" = "gold",
+      "Defensive Rebounds" = "orange",
+      "Total Rebounds" = "blueviolet"
+    )
+  )
+
+```
+
+Zbiórki defensywne - stabilny wzrost w pierwszych latach kariery, osiągnięcie szczytu w połowie, a następnie spadek.\
+Zbiórki ofensywne - na niższym poziomie niż defensywnem, ale pokazują podobny trend.\
+Łączne zbiórki - najwyższy poziom w środkowej częsci kariery, co sugeruje wszechstronność i aktywność w grze pod koszem.
+
+#### Korelacja między zmiennymi
+
+```{r}
+data_numeric <- data %>%
+  select(personal_fouls, points, assists, steals, turnovers, blocks)
+
+cor_matrix <- cor(data_numeric, use = "complete.obs")
+
+fig <- plot_ly(
+  z = cor_matrix, 
+  x = colnames(cor_matrix), 
+  y = rownames(cor_matrix), 
+  type = "heatmap", 
+  colors = colorRamp(c("blueviolet", "orange", "gold"))
+)
+
+fig <- fig %>%
+  layout(
+    title = "HeatMap of Correlation Between Variables",
+    xaxis = list(title = ""),
+    yaxis = list(title = "")
+  )
+
+fig
+
+```
+
+Z wykresu wynika, że zależność między poszczególnymi elementami gry Kobe Bryanta na boisku jest bardzo mała lub wcale nie istnieje. Wynika stąd, że zmienne te nie są ze sobą skorelowane i wystąpienie jednej nie wpływa na zwiększenie (lub zmniejszenie) szans na wystąpienie innej.
+
+## Wnioski
+
+Najlepsze lata kariery Kobe Bryanta, to okres między 6 a 15 sezonem. Liczba zdobytych punktów, asyst, bloków i zbiórek osiągają wtedy największe wartości. \
+Końcówka kariery - między 17 a 20 sezonem następuje gwałtowny spadek w większości statystyk. Jest to spowodowane odniesioną kontuzją oraz zbliżaniem się do zakończenia kariery.\
+Początkowe hipotezy zostały zweryfikowane w czasie analizy wyników i zależności przedstawionych w prezentacji.
+
+## Źródła
+
+-   <https://www.google.com/search?sca_esv=2489372fa4accccc&sxsrf=ADLYWIK_VCf5nKPtnNG595yI1s28zWEPQg:1736972371691&q=los+angeles+lakers&udm=2&fbs=AEQNm0Dvr3xYvXRaGaB8liPABJYdIh7mUHtqiGBY9eDETSSmYmVhnAFRq2t4xC19LYoCrlqOw0yU3fOqUDODAYH304k9w5cz78WMaJCvXEUeoIlxDiwL-0HnUHEiIc09dDHhni7YwFWi66-4wwg_7JNdz68xuBz8hPh9Yyf-X5Esl18pnY8I4Iamq-7iUE7CMFmlQDymmpP_DRU4FGw_0bQKTMttEjy_Fg&sa=X&ved=2ahUKEwiw5cupxviKAxWuKxAIHUA7B6cQtKgLegQIFRAB&biw=1536&bih=703&dpr=1.25#vhid=fCCzulW6GKODgM&vssid=mosaic>
+
+-   <https://www.google.com/search?sca_esv=2489372fa4accccc&sxsrf=ADLYWILYjAkgA8LEDmdhxeJI13G127e2PQ:1736972500431&q=denver+nuggets&udm=2&fbs=AEQNm0Dvr3xYvXRaGaB8liPABJYdGovAUMem85jmaNP43N9LWkXhijFrCu00w0cT2IyMHx8m0vAToF5nDRQoYGSjFZs2O8G642o9lEsreWFrgLMANK_QTRYylQkdYV0n6S-sy4omaxMZc9fUPa-A366WshgUW03TI4LsXyvH-H3MxaIDa7GbP8bQBvLfmeauZRAZxv38gJhLTAYbhQWtAmsYQqGPHlNxxA&sa=X&ved=2ahUKEwiLwf3mxviKAxWzGRAIHf4YEn8QtKgLegQIFRAB&biw=1536&bih=703&dpr=1.25#vhid=NXWwp5ZegZOTHM&vssid=mosaic>
+
+-   <https://www.google.com/search?sca_esv=2489372fa4accccc&sxsrf=ADLYWIIVB8STd-C-TYO73SQqc42FsjHNWg:1736972520091&q=timberwolves&udm=2&fbs=AEQNm0Dvr3xYvXRaGaB8liPABJYdGovAUMem85jmaNP43N9LWkXhijFrCu00w0cT2IyMHx8m0vAToF5nDRQoYGSjFZs2O8G642o9lEsreWFrgLMANK_QTRYylQkdYV0n6S-sy4omaxMZc9fUPa-A366WshgUW03TI4LsXyvH-H3MxaIDa7GbP8bQBvLfmeauZRAZxv38gJhLTAYbhQWtAmsYQqGPHlNxxA&sa=X&ved=2ahUKEwjSrq3wxviKAxXFJBAIHZRNHM8QtKgLegQIFRAB&biw=1536&bih=703&dpr=1.25#vhid=qqGq66w6ieMkkM&vssid=mosaic>
+
+-   <https://www.google.com/search?sca_esv=2489372fa4accccc&sxsrf=ADLYWIITjOt-KTSgMwUSmYBfcPG7TLQrBQ:1736972545950&q=sacramento+kings&udm=2&fbs=AEQNm0Dvr3xYvXRaGaB8liPABJYdIh7mUHtqiGBY9eDETSSmYmVhnAFRq2t4xC19LYoCrlqOw0yU3fOqUDODAYH304k9w5cz78WMaJCvXEUeoIlxDiwL-0HnUHEiIc09dDHhni7YwFWi66-4wwg_7JNdz68xuBz8hPh9Yyf-X5Esl18pnY8I4Iamq-7iUE7CMFmlQDymmpP_DRU4FGw_0bQKTMttEjy_Fg&sa=X&ved=2ahUKEwi14Nf8xviKAxVHCBAIHX8mE40QtKgLegQIDxAB&biw=1536&bih=703&dpr=1.25#vhid=_b5-fiwbhFQqjM&vssid=mosaic>
+
+-   <https://www.google.com/search?sca_esv=2489372fa4accccc&sxsrf=ADLYWIJV5b5Uw93jZkcLDiKhWm5Z2bWdnw:1736972597482&q=portland+trail+blazers&udm=2&fbs=AEQNm0Dvr3xYvXRaGaB8liPABJYdIh7mUHtqiGBY9eDETSSmYmVhnAFRq2t4xC19LYoCrlqOw0yU3fOqUDODAYH304k9W9_U6RwkuiIK70bYqEwvNCXDqzHaP2nxU6HFgs0CmhoyR4EAWfVAcHCRtv6QzUWCFJYvoj2JimtBp8kN3P2IIWpR5BRBz49ECj0qGWWtoV0Lbpiz&sa=X&ved=2ahUKEwiY9qCVx_iKAxUJQlUIHfIVGJ4QtKgLegQIFBAB&biw=1536&bih=703&dpr=1.25#vhid=F-f7EaRNjFvF4M&vssid=mosaic>
+
+-   <https://www.google.com/search?sca_esv=2489372fa4accccc&sxsrf=ADLYWII_kAE1XGoMG8MNXRQVab0wSB1uOA:1736972630755&q=utah+jazz&udm=2&fbs=AEQNm0Dvr3xYvXRaGaB8liPABJYdGovAUMem85jmaNP43N9LWkXhijFrCu00w0cT2IyMHx8m0vAToF5nDRQoYGSjFZs2O8G642o9lEsreWFrgLMANK_QTRYylQkdYV0n6S-sy4omaxMZc9fUPa-A366WshgUW03TI4LsXyvH-H3MxaIDa7GbP8bQBvLfmeauZRAZxv38gJhLTAYbhQWtAmsYQqGPHlNxxA&sa=X&ved=2ahUKEwjJ44-lx_iKAxWzGhAIHdxFPbAQtKgLegQIFBAB&biw=1536&bih=703&dpr=1.25#vhid=dy6fLz53_toprM&vssid=mosaic>
+
+-   <https://www.google.com/search?sca_esv=2489372fa4accccc&sxsrf=ADLYWIK-C7sqlvtYJIULe5evKxyjJyyOBQ:1736972673315&q=san+antonio+spurs&udm=2&fbs=AEQNm0Dvr3xYvXRaGaB8liPABJYdIh7mUHtqiGBY9eDETSSmYmVhnAFRq2t4xC19LYoCrlqOw0yU3fOqUDODAYH304k9w5cz78WMaJCvXEUeoIlxDiwL-0HnUHEiIc09dDHhni7YwFWi66-4wwg_7JNdz68xuBz8hPh9Yyf-X5Esl18pnY8I4Iamq-7iUE7CMFmlQDymmpP_DRU4FGw_0bQKTMttEjy_Fg&sa=X&ved=2ahUKEwjavrW5x_iKAxUUHBAIHfS9PK0QtKgLegQIFBAB&biw=1536&bih=703&dpr=1.25#vhid=iGtvkWWIP7a8xM&vssid=mosaic>
+
+-   <https://www.google.com/search?sca_esv=2489372fa4accccc&sxsrf=ADLYWILOxjUQACqTumvjegRAdfr62Xt7kQ:1736972752340&q=phoenix+suns&udm=2&fbs=AEQNm0Dvr3xYvXRaGaB8liPABJYdGovAUMem85jmaNP43N9LWkXhijFrCu00w0cT2IyMHx8m0vAToF5nDRQoYGSjFZs2O8G642o9lEsreWFrgLMANK_QTRYylQkdYV0n6S-sy4omaxMZc9fUPa-A366WshgUW03TI4LsXyvH-H3MxaIDa7GbP8bQBvLfmeauZRAZxv38gJhLTAYbhQWtAmsYQqGPHlNxxA&sa=X&ved=2ahUKEwiu7Izfx_iKAxWdFRAIHfSYPN0QtKgLegQIFBAB&biw=1536&bih=703&dpr=1.25#vhid=l5u8kdqP85sDHM&vssid=mosaic>
+
+-   <https://www.google.com/search?sca_esv=2489372fa4accccc&sxsrf=ADLYWILGZ6TJwzgJEemLG7y5v5waybYkJg:1736972779229&q=houston+rockets&udm=2&fbs=AEQNm0Dvr3xYvXRaGaB8liPABJYdGovAUMem85jmaNP43N9LWkXhijFrCu00w0cT2IyMHx8m0vAToF5nDRQoYGSjFZs2O8G642o9lEsreWFrgLMANK_QTRYylQkdYV0n6S-sy4omaxMZc9fUPa-A366WshgUW03TI4LsXyvH-H3MxaIDa7GbP8bQBvLfmeauZRAZxv38gJhLTAYbhQWtAmsYQqGPHlNxxA&sa=X&ved=2ahUKEwi3__Xrx_iKAxUeIRAIHWa3A04QtKgLegQIEBAB&biw=1536&bih=703&dpr=1.25#vhid=pYHmz3NY13bmYM&vssid=mosaic>
